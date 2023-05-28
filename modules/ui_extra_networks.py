@@ -1,9 +1,11 @@
+import glob
 import os.path
 import urllib.parse
 from pathlib import Path
+from PIL import PngImagePlugin
 
 from modules import shared
-from modules.images import read_info_from_image, save_image_with_geninfo
+from modules.images import read_info_from_image
 import gradio as gr
 import json
 import html
@@ -25,11 +27,11 @@ def register_page(page):
 def fetch_file(filename: str = ""):
     from starlette.responses import FileResponse
 
-    if not any(Path(x).absolute() in Path(filename).absolute().parents for x in allowed_dirs):
+    if not any([Path(x).absolute() in Path(filename).absolute().parents for x in allowed_dirs]):
         raise ValueError(f"File cannot be fetched: {filename}. Must be in one of directories registered by extra pages.")
 
     ext = os.path.splitext(filename)[1].lower()
-    if ext not in (".png", ".jpg", ".jpeg", ".webp"):
+    if ext not in (".png", ".jpg", ".webp"):
         raise ValueError(f"File cannot be fetched: {filename}. Only png and jpg and webp.")
 
     # would profit from returning 304
@@ -89,7 +91,7 @@ class ExtraNetworksPage:
 
         subdirs = {}
         for parentdir in [os.path.abspath(x) for x in self.allowed_directories_for_previews()]:
-            for root, dirs, _ in os.walk(parentdir, followlinks=True):
+            for root, dirs, files in os.walk(parentdir):
                 for dirname in dirs:
                     x = os.path.join(root, dirname)
 
@@ -103,9 +105,6 @@ class ExtraNetworksPage:
                     is_empty = len(os.listdir(x)) == 0
                     if not is_empty and not subdir.endswith("/"):
                         subdir = subdir + "/"
-
-                    if ("/." in subdir or subdir.startswith(".")) and not shared.opts.extra_networks_show_hidden_directories:
-                        continue
 
                     subdirs[subdir] = 1
 
@@ -149,10 +148,6 @@ class ExtraNetworksPage:
         return []
 
     def create_html_for_item(self, item, tabname):
-        """
-        Create HTML for card item in tab tabname; can return empty string if the item is not meant to be shown.
-        """
-
         preview = item.get("preview", None)
 
         onclick = item.get("onclick", None)
@@ -161,7 +156,7 @@ class ExtraNetworksPage:
 
         height = f"height: {shared.opts.extra_networks_card_height}px;" if shared.opts.extra_networks_card_height else ''
         width = f"width: {shared.opts.extra_networks_card_width}px;" if shared.opts.extra_networks_card_width else ''
-        background_image = f'<img src="{html.escape(preview)}" class="preview" loading="lazy">' if preview else ''
+        background_image = f"background-image: url(\"{html.escape(preview)}\");" if preview else ''
         metadata_button = ""
         metadata = item.get("metadata")
         if metadata:
@@ -175,19 +170,12 @@ class ExtraNetworksPage:
             if filename.startswith(absdir):
                 local_path = filename[len(absdir):]
 
-        # if this is true, the item must not be shown in the default view, and must instead only be
+        # if this is true, the item must not be show in the default view, and must instead only be
         # shown when searching for it
-        if shared.opts.extra_networks_hidden_models == "Always":
-            search_only = False
-        else:
-            search_only = "/." in local_path or "\\." in local_path
-
-        if search_only and shared.opts.extra_networks_hidden_models == "Never":
-            return ""
+        serach_only = "/." in local_path or "\\." in local_path
 
         args = {
-            "background_image": background_image,
-            "style": f"'display: none; {height}{width}'",
+            "style": f"'display: none; {height}{width}{background_image}'",
             "prompt": item.get("prompt", None),
             "tabname": json.dumps(tabname),
             "local_preview": json.dumps(item["local_preview"]),
@@ -197,7 +185,7 @@ class ExtraNetworksPage:
             "save_card_preview": '"' + html.escape(f"""return saveCardPreview(event, {json.dumps(tabname)}, {json.dumps(item["local_preview"])})""") + '"',
             "search_term": item.get("search_term", ""),
             "metadata_button": metadata_button,
-            "search_only": " search_only" if search_only else "",
+            "serach_only": " search_only" if serach_only else "",
         }
 
         return self.card_page.format(**args)
@@ -207,7 +195,7 @@ class ExtraNetworksPage:
         Find a preview PNG for a given path (without extension) and call link_preview on it.
         """
 
-        preview_extensions = ["png", "jpg", "jpeg", "webp"]
+        preview_extensions = ["png", "jpg", "webp"]
         if shared.opts.samples_format not in preview_extensions:
             preview_extensions.append(shared.opts.samples_format)
 
@@ -232,17 +220,8 @@ class ExtraNetworksPage:
         return None
 
 
-def initialize():
+def intialize():
     extra_pages.clear()
-
-
-def register_default_pages():
-    from modules.ui_extra_networks_textual_inversion import ExtraNetworksPageTextualInversion
-    from modules.ui_extra_networks_hypernets import ExtraNetworksPageHypernetworks
-    from modules.ui_extra_networks_checkpoints import ExtraNetworksPageCheckpoints
-    register_page(ExtraNetworksPageTextualInversion())
-    register_page(ExtraNetworksPageHypernetworks())
-    register_page(ExtraNetworksPageCheckpoints())
 
 
 class ExtraNetworksUi:
@@ -284,13 +263,13 @@ def create_ui(container, button, tabname):
     ui.stored_extra_pages = pages_in_preferred_order(extra_pages.copy())
     ui.tabname = tabname
 
-    with gr.Tabs(elem_id=tabname+"_extra_tabs"):
+    with gr.Tabs(elem_id=tabname+"_extra_tabs") as tabs:
         for page in ui.stored_extra_pages:
             page_id = page.title.lower().replace(" ", "_")
 
             with gr.Tab(page.title, id=page_id):
                 elem_id = f"{tabname}_{page_id}_cards_html"
-                page_elem = gr.HTML('Loading...', elem_id=elem_id)
+                page_elem = gr.HTML('', elem_id=elem_id)
                 ui.pages.append(page_elem)
 
                 page_elem.change(fn=lambda: None, _js='function(){applyExtraNetworkFilter(' + json.dumps(tabname) + '); return []}', inputs=[], outputs=[])
@@ -304,24 +283,13 @@ def create_ui(container, button, tabname):
     def toggle_visibility(is_visible):
         is_visible = not is_visible
 
-        return is_visible, gr.update(visible=is_visible), gr.update(variant=("secondary-down" if is_visible else "secondary"))
-
-    def fill_tabs(is_empty):
-        """Creates HTML for extra networks' tabs when the extra networks button is clicked for the first time."""
-
-        if not ui.pages_contents:
+        if is_visible and not ui.pages_contents:
             refresh()
 
-        if is_empty:
-            return True, *ui.pages_contents
-
-        return True, *[gr.update() for _ in ui.pages_contents]
+        return is_visible, gr.update(visible=is_visible), gr.update(variant=("secondary-down" if is_visible else "secondary")), *ui.pages_contents
 
     state_visible = gr.State(value=False)
-    button.click(fn=toggle_visibility, inputs=[state_visible], outputs=[state_visible, container, button], show_progress=False)
-
-    state_empty = gr.State(value=True)
-    button.click(fn=fill_tabs, inputs=[state_empty], outputs=[state_empty, *ui.pages], show_progress=False)
+    button.click(fn=toggle_visibility, inputs=[state_visible], outputs=[state_visible, container, button, *ui.pages])
 
     def refresh():
         for pg in ui.stored_extra_pages:
@@ -359,13 +327,18 @@ def setup_ui(ui, gallery):
 
         is_allowed = False
         for extra_page in ui.stored_extra_pages:
-            if any(path_is_parent(x, filename) for x in extra_page.allowed_directories_for_previews()):
+            if any([path_is_parent(x, filename) for x in extra_page.allowed_directories_for_previews()]):
                 is_allowed = True
                 break
 
         assert is_allowed, f'writing to {filename} is not allowed'
 
-        save_image_with_geninfo(image, geninfo, filename)
+        if geninfo:
+            pnginfo_data = PngImagePlugin.PngInfo()
+            pnginfo_data.add_text('parameters', geninfo)
+            image.save(filename, pnginfo=pnginfo_data)
+        else:
+            image.save(filename)
 
         return [page.create_html(ui.tabname) for page in ui.stored_extra_pages]
 

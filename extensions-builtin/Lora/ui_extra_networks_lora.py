@@ -16,7 +16,10 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
         for name, lora_on_disk in lora.available_loras.items():
             path, ext = os.path.splitext(lora_on_disk.filename)
 
-            alias = lora_on_disk.get_alias()
+            if shared.opts.lora_preferred_name == "Filename" or lora_on_disk.alias.lower() in lora.forbidden_lora_aliases:
+                alias = name
+            else:
+                alias = lora_on_disk.alias
 
             yield {
                 "name": name,

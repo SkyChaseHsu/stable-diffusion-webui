@@ -1,9 +1,10 @@
+import glob
 import os
 import re
 import torch
 from typing import Union
 
-from modules import shared, devices, sd_models, errors, scripts, sd_hijack, hashes
+from modules import shared, devices, sd_models, errors, scripts
 
 metadata_tags_order = {"ss_sd_model_name": 1, "ss_resolution": 2, "ss_clip_skip": 3, "ss_num_train_images": 10, "ss_tag_frequency": 20}
 
@@ -76,9 +77,9 @@ class LoraOnDisk:
         self.name = name
         self.filename = filename
         self.metadata = {}
-        self.is_safetensors = os.path.splitext(filename)[1].lower() == ".safetensors"
 
-        if self.is_safetensors:
+        _, ext = os.path.splitext(filename)
+        if ext.lower() == ".safetensors":
             try:
                 self.metadata = sd_models.read_metadata_from_safetensors(filename)
             except Exception as e:
@@ -94,42 +95,13 @@ class LoraOnDisk:
         self.ssmd_cover_images = self.metadata.pop('ssmd_cover_images', None)  # those are cover images and they are too big to display in UI as text
         self.alias = self.metadata.get('ss_output_name', self.name)
 
-        self.hash = None
-        self.shorthash = None
-        self.set_hash(
-            self.metadata.get('sshs_model_hash') or
-            hashes.sha256_from_cache(self.filename, "lora/" + self.name, use_addnet_hash=self.is_safetensors) or
-            ''
-        )
-
-    def set_hash(self, v):
-        self.hash = v
-        self.shorthash = self.hash[0:12]
-
-        if self.shorthash:
-            available_lora_hash_lookup[self.shorthash] = self
-
-    def read_hash(self):
-        if not self.hash:
-            self.set_hash(hashes.sha256(self.filename, "lora/" + self.name, use_addnet_hash=self.is_safetensors) or '')
-
-    def get_alias(self):
-        if shared.opts.lora_preferred_name == "Filename" or self.alias.lower() in forbidden_lora_aliases:
-            return self.name
-        else:
-            return self.alias
-
 
 class LoraModule:
-    def __init__(self, name, lora_on_disk: LoraOnDisk):
+    def __init__(self, name):
         self.name = name
-        self.lora_on_disk = lora_on_disk
         self.multiplier = 1.0
         self.modules = {}
         self.mtime = None
-
-        self.mentioned_name = None
-        """the text that was used to add lora to prompt - can be either name or an alias"""
 
 
 class LoraUpDownModule:
@@ -155,11 +127,11 @@ def assign_lora_names_to_compvis_modules(sd_model):
     sd_model.lora_layer_mapping = lora_layer_mapping
 
 
-def load_lora(name, lora_on_disk):
-    lora = LoraModule(name, lora_on_disk)
-    lora.mtime = os.path.getmtime(lora_on_disk.filename)
+def load_lora(name, filename):
+    lora = LoraModule(name)
+    lora.mtime = os.path.getmtime(filename)
 
-    sd = sd_models.read_state_dict(lora_on_disk.filename)
+    sd = sd_models.read_state_dict(filename)
 
     # this should not be needed but is here as an emergency fix for an unknown error people are experiencing in 1.2.0
     if not hasattr(shared.sd_model, 'lora_layer_mapping'):
@@ -205,7 +177,7 @@ def load_lora(name, lora_on_disk):
         else:
             print(f'Lora layer {key_diffusers} matched a layer with unsupported type: {type(sd_module).__name__}')
             continue
-            raise AssertionError(f"Lora layer {key_diffusers} matched a layer with unsupported type: {type(sd_module).__name__}")
+            assert False, f'Lora layer {key_diffusers} matched a layer with unsupported type: {type(sd_module).__name__}'
 
         with torch.no_grad():
             module.weight.copy_(weight)
@@ -217,10 +189,10 @@ def load_lora(name, lora_on_disk):
         elif lora_key == "lora_down.weight":
             lora_module.down = module
         else:
-            raise AssertionError(f"Bad Lora layer name: {key_diffusers} - must end in lora_up.weight, lora_down.weight or alpha")
+            assert False, f'Bad Lora layer name: {key_diffusers} - must end in lora_up.weight, lora_down.weight or alpha'
 
     if len(keys_failed_to_match) > 0:
-        print(f"Failed to match keys when loading Lora {lora_on_disk.filename}: {keys_failed_to_match}")
+        print(f"Failed to match keys when loading Lora {filename}: {keys_failed_to_match}")
 
     return lora
 
@@ -235,40 +207,29 @@ def load_loras(names, multipliers=None):
     loaded_loras.clear()
 
     loras_on_disk = [available_lora_aliases.get(name, None) for name in names]
-    if any(x is None for x in loras_on_disk):
+    if any([x is None for x in loras_on_disk]):
         list_available_loras()
 
         loras_on_disk = [available_lora_aliases.get(name, None) for name in names]
-
-    failed_to_load_loras = []
 
     for i, name in enumerate(names):
         lora = already_loaded.get(name, None)
 
         lora_on_disk = loras_on_disk[i]
-
         if lora_on_disk is not None:
             if lora is None or os.path.getmtime(lora_on_disk.filename) > lora.mtime:
                 try:
-                    lora = load_lora(name, lora_on_disk)
+                    lora = load_lora(name, lora_on_disk.filename)
                 except Exception as e:
                     errors.display(e, f"loading Lora {lora_on_disk.filename}")
                     continue
 
-            lora.mentioned_name = name
-
-            lora_on_disk.read_hash()
-
         if lora is None:
-            failed_to_load_loras.append(name)
             print(f"Couldn't find Lora with name {name}")
             continue
 
         lora.multiplier = multipliers[i] if multipliers else 1.0
         loaded_loras.append(lora)
-
-    if len(failed_to_load_loras) > 0:
-        sd_hijack.model_hijack.comments.append("Failed to find Loras: " + ", ".join(failed_to_load_loras))
 
 
 def lora_calc_updown(lora, module, target):
@@ -353,7 +314,7 @@ def lora_apply_weights(self: Union[torch.nn.Conv2d, torch.nn.Linear, torch.nn.Mu
 
             print(f'failed to calculate lora weights for layer {lora_layer_name}')
 
-        self.lora_current_names = wanted_names
+        setattr(self, "lora_current_names", wanted_names)
 
 
 def lora_forward(module, input, original_forward):
@@ -387,8 +348,8 @@ def lora_forward(module, input, original_forward):
 
 
 def lora_reset_cached_weight(self: Union[torch.nn.Conv2d, torch.nn.Linear]):
-    self.lora_current_names = ()
-    self.lora_weights_backup = None
+    setattr(self, "lora_current_names", ())
+    setattr(self, "lora_weights_backup", None)
 
 
 def lora_Linear_forward(self, input):
@@ -437,8 +398,7 @@ def list_available_loras():
     available_loras.clear()
     available_lora_aliases.clear()
     forbidden_lora_aliases.clear()
-    available_lora_hash_lookup.clear()
-    forbidden_lora_aliases.update({"none": 1, "Addams": 1})
+    forbidden_lora_aliases.update({"none": 1})
 
     os.makedirs(shared.cmd_opts.lora_dir, exist_ok=True)
 
@@ -468,7 +428,7 @@ def infotext_pasted(infotext, params):
 
     added = []
 
-    for k in params:
+    for k, v in params.items():
         if not k.startswith("AddNet Model "):
             continue
 
@@ -492,10 +452,8 @@ def infotext_pasted(infotext, params):
     if added:
         params["Prompt"] += "\n" + "".join(added)
 
-
 available_loras = {}
 available_lora_aliases = {}
-available_lora_hash_lookup = {}
 forbidden_lora_aliases = {}
 loaded_loras = []
 

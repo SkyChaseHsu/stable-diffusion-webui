@@ -1,8 +1,17 @@
+# We need this so Python doesn't complain about the unknown StableDiffusionProcessing-typehint at runtime
+from __future__ import annotations
+
 import csv
 import os
 import os.path
 import typing
+import collections.abc as abc
+import tempfile
 import shutil
+
+if typing.TYPE_CHECKING:
+    # Only import this when code is being type-checked, it doesn't have any effect at runtime
+    from .processing import StableDiffusionProcessing
 
 
 class PromptStyle(typing.NamedTuple):
@@ -43,7 +52,7 @@ class StyleDatabase:
             return
 
         with open(self.path, "r", encoding="utf-8-sig", newline='') as file:
-            reader = csv.DictReader(file, skipinitialspace=True)
+            reader = csv.DictReader(file)
             for row in reader:
                 # Support loading old CSV format with "name, text"-columns
                 prompt = row["prompt"] if "prompt" in row else row["text"]
