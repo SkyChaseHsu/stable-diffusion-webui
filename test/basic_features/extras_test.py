@@ -1,9 +1,12 @@
 import os
 import unittest
+
 import requests
-from gradio.processing_utils import encode_pil_to_base64
 from PIL import Image
+from gradio.processing_utils import encode_pil_to_base64
+
 from modules.paths import script_path
+
 
 class TestExtrasWorking(unittest.TestCase):
     def setUp(self):
@@ -22,7 +25,7 @@ class TestExtrasWorking(unittest.TestCase):
             "upscaler_2": "None",
             "extras_upscaler_2_visibility": 0,
             "image": encode_pil_to_base64(Image.open(os.path.join(script_path, r"test/test_files/img2img_basic.png")))
-            }
+        }
 
     def test_simple_upscaling_performed(self):
         self.extras_single["upscaler_1"] = "Lanczos"

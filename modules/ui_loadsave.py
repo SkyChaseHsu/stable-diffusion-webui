@@ -37,7 +37,7 @@ class UiLoadsave:
             key = f"{path}/{field}"
 
             if getattr(obj, 'custom_script_source', None) is not None:
-              key = f"customscript/{obj.custom_script_source}/{key}"
+                key = f"customscript/{obj.custom_script_source}/{key}"
 
             if getattr(obj, 'do_not_save_to_config', False):
                 return
@@ -55,7 +55,8 @@ class UiLoadsave:
             if field == 'value' and key not in self.component_mapping:
                 self.component_mapping[key] = x
 
-        if type(x) in [gr.Slider, gr.Radio, gr.Checkbox, gr.Textbox, gr.Number, gr.Dropdown, ToolButton, gr.Button] and x.visible:
+        if type(x) in [gr.Slider, gr.Radio, gr.Checkbox, gr.Textbox, gr.Number, gr.Dropdown, ToolButton,
+                       gr.Button] and x.visible:
             apply_field(x, 'visible')
 
         if type(x) == gr.Slider:
@@ -206,5 +207,7 @@ class UiLoadsave:
         assert not self.finalized_ui
         self.finalized_ui = True
 
-        self.ui_defaults_view.click(fn=self.ui_view, inputs=list(self.component_mapping.values()), outputs=[self.ui_defaults_review])
-        self.ui_defaults_apply.click(fn=self.ui_apply, inputs=list(self.component_mapping.values()), outputs=[self.ui_defaults_review])
+        self.ui_defaults_view.click(fn=self.ui_view, inputs=list(self.component_mapping.values()),
+                                    outputs=[self.ui_defaults_review])
+        self.ui_defaults_apply.click(fn=self.ui_apply, inputs=list(self.component_mapping.values()),
+                                     outputs=[self.ui_defaults_review])

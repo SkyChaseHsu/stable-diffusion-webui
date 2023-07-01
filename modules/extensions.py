@@ -1,13 +1,12 @@
 import os
 import sys
+import time
 import traceback
 
-import time
-from datetime import datetime
 import git
 
 from modules import shared
-from modules.paths_internal import extensions_dir, extensions_builtin_dir, script_path
+from modules.paths_internal import extensions_dir, extensions_builtin_dir
 
 extensions = []
 
@@ -141,5 +140,6 @@ def list_extensions():
             extension_paths.append((extension_dirname, path, dirname == extensions_builtin_dir))
 
     for dirname, path, is_builtin in extension_paths:
-        extension = Extension(name=dirname, path=path, enabled=dirname not in shared.opts.disabled_extensions, is_builtin=is_builtin)
+        extension = Extension(name=dirname, path=path, enabled=dirname not in shared.opts.disabled_extensions,
+                              is_builtin=is_builtin)
         extensions.append(extension)

@@ -428,7 +428,7 @@ class Script(scripts.Script):
 
         def swap_axes(axis1_type, axis1_values, axis1_values_dropdown, axis2_type, axis2_values, axis2_values_dropdown):
             return self.current_axis_options[axis2_type].label, axis2_values, axis2_values_dropdown, \
-            self.current_axis_options[axis1_type].label, axis1_values, axis1_values_dropdown
+                self.current_axis_options[axis1_type].label, axis1_values, axis1_values_dropdown
 
         xy_swap_args = [x_type, x_values, x_values_dropdown, y_type, y_values, y_values_dropdown]
         swap_xy_axes_button.click(swap_axes, inputs=xy_swap_args, outputs=xy_swap_args)

@@ -1,4 +1,5 @@
 import torch
+
 from modules import devices
 
 module_in_gpu = None
@@ -57,7 +58,10 @@ def setup_for_low_vram(sd_model, use_medvram):
 
     # remove several big modules: cond, first_stage, depth/embedder (if applicable), and unet from the model and then
     # send the model to GPU. Then put modules back. the modules will be in CPU.
-    stored = sd_model.cond_stage_model.transformer, sd_model.first_stage_model, getattr(sd_model, 'depth_model', None), getattr(sd_model, 'embedder', None), sd_model.model
+    stored = sd_model.cond_stage_model.transformer, sd_model.first_stage_model, getattr(sd_model, 'depth_model',
+                                                                                        None), getattr(sd_model,
+                                                                                                       'embedder',
+                                                                                                       None), sd_model.model
     sd_model.cond_stage_model.transformer, sd_model.first_stage_model, sd_model.depth_model, sd_model.embedder, sd_model.model = None, None, None, None, None
     sd_model.to(devices.device)
     sd_model.cond_stage_model.transformer, sd_model.first_stage_model, sd_model.depth_model, sd_model.embedder, sd_model.model = stored

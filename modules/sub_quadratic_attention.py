@@ -10,19 +10,20 @@
 #   Self-attention Does Not Need O(n2) Memory":
 #   https://arxiv.org/abs/2112.05682v2
 
+import math
 from functools import partial
+from typing import Optional, NamedTuple, List
+
 import torch
 from torch import Tensor
 from torch.utils.checkpoint import checkpoint
-import math
-from typing import Optional, NamedTuple, List
 
 
 def narrow_trunc(
-    input: Tensor,
-    dim: int,
-    start: int,
-    length: int
+        input: Tensor,
+        dim: int,
+        start: int,
+        length: int
 ) -> Tensor:
     return torch.narrow(input, dim, start, length if input.shape[dim] >= start + length else input.shape[dim] - start)
 
@@ -36,48 +37,49 @@ class AttnChunk(NamedTuple):
 class SummarizeChunk:
     @staticmethod
     def __call__(
-        query: Tensor,
-        key: Tensor,
-        value: Tensor,
+            query: Tensor,
+            key: Tensor,
+            value: Tensor,
     ) -> AttnChunk: ...
 
 
 class ComputeQueryChunkAttn:
     @staticmethod
     def __call__(
-        query: Tensor,
-        key: Tensor,
-        value: Tensor,
+            query: Tensor,
+            key: Tensor,
+            value: Tensor,
     ) -> Tensor: ...
 
 
 def _summarize_chunk(
-    query: Tensor,
-    key: Tensor,
-    value: Tensor,
-    scale: float,
+        query: Tensor,
+        key: Tensor,
+        value: Tensor,
+        scale: float,
 ) -> AttnChunk:
     attn_weights = torch.baddbmm(
         torch.empty(1, 1, 1, device=query.device, dtype=query.dtype),
         query,
-        key.transpose(1,2),
+        key.transpose(1, 2),
         alpha=scale,
         beta=0,
     )
     max_score, _ = torch.max(attn_weights, -1, keepdim=True)
     max_score = max_score.detach()
     exp_weights = torch.exp(attn_weights - max_score)
-    exp_values = torch.bmm(exp_weights, value) if query.device.type == 'mps' else torch.bmm(exp_weights, value.to(exp_weights.dtype)).to(value.dtype)
+    exp_values = torch.bmm(exp_weights, value) if query.device.type == 'mps' else torch.bmm(exp_weights, value.to(
+        exp_weights.dtype)).to(value.dtype)
     max_score = max_score.squeeze(-1)
     return AttnChunk(exp_values, exp_weights.sum(dim=-1), max_score)
 
 
 def _query_chunk_attention(
-    query: Tensor,
-    key: Tensor,
-    value: Tensor,
-    summarize_chunk: SummarizeChunk,
-    kv_chunk_size: int,
+        query: Tensor,
+        key: Tensor,
+        value: Tensor,
+        summarize_chunk: SummarizeChunk,
+        kv_chunk_size: int,
 ) -> Tensor:
     batch_x_heads, k_tokens, k_channels_per_head = key.shape
     _, _, v_channels_per_head = value.shape
@@ -115,21 +117,24 @@ def _query_chunk_attention(
 
 # TODO: refactor CrossAttention#get_attention_scores to share code with this
 def _get_attention_scores_no_kv_chunking(
-    query: Tensor,
-    key: Tensor,
-    value: Tensor,
-    scale: float,
+        query: Tensor,
+        key: Tensor,
+        value: Tensor,
+        scale: float,
 ) -> Tensor:
     attn_scores = torch.baddbmm(
         torch.empty(1, 1, 1, device=query.device, dtype=query.dtype),
         query,
-        key.transpose(1,2),
+        key.transpose(1, 2),
         alpha=scale,
         beta=0,
     )
     attn_probs = attn_scores.softmax(dim=-1)
     del attn_scores
-    hidden_states_slice = torch.bmm(attn_probs, value) if query.device.type == 'mps' else torch.bmm(attn_probs, value.to(attn_probs.dtype)).to(value.dtype)
+    hidden_states_slice = torch.bmm(attn_probs, value) if query.device.type == 'mps' else torch.bmm(attn_probs,
+                                                                                                    value.to(
+                                                                                                        attn_probs.dtype)).to(
+        value.dtype)
     return hidden_states_slice
 
 
@@ -139,13 +144,13 @@ class ScannedChunk(NamedTuple):
 
 
 def efficient_dot_product_attention(
-    query: Tensor,
-    key: Tensor,
-    value: Tensor,
-    query_chunk_size=1024,
-    kv_chunk_size: Optional[int] = None,
-    kv_chunk_size_min: Optional[int] = None,
-    use_checkpoint=True,
+        query: Tensor,
+        key: Tensor,
+        value: Tensor,
+        query_chunk_size=1024,
+        kv_chunk_size: Optional[int] = None,
+        kv_chunk_size_min: Optional[int] = None,
+        use_checkpoint=True,
 ):
     """Computes efficient dot-product attention given query, key, and value.
       This is efficient version of attention presented in
@@ -179,7 +184,7 @@ def efficient_dot_product_attention(
             chunk_idx,
             min(query_chunk_size, q_tokens)
         )
-    
+
     summarize_chunk: SummarizeChunk = partial(_summarize_chunk, scale=scale)
     summarize_chunk: SummarizeChunk = partial(checkpoint, summarize_chunk) if use_checkpoint else summarize_chunk
     compute_query_chunk_attn: ComputeQueryChunkAttn = partial(
@@ -201,7 +206,7 @@ def efficient_dot_product_attention(
             key=key,
             value=value,
         )
-    
+
     # TODO: maybe we should use torch.empty_like(query) to allocate storage in-advance,
     # and pass slices to be mutated, instead of torch.cat()ing the returned slices
     res = torch.cat([

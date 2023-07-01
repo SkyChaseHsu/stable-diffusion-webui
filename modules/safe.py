@@ -1,18 +1,19 @@
 # this code is adapted from the script contributed by anon from /h/
 
-import pickle
+import _codecs
 import collections
+import pickle
+import re
 import sys
 import traceback
-
-import torch
-import numpy
-import _codecs
 import zipfile
-import re
+
+import numpy
+import torch
 
 # PyTorch 1.13 and later have _TypedStorage renamed to TypedStorage
 TypedStorage = torch.storage.TypedStorage if hasattr(torch.storage, 'TypedStorage') else torch.storage._TypedStorage
+
 
 def encode(*args):
     out = _codecs.encode(*args)
@@ -38,9 +39,11 @@ class RestrictedUnpickler(pickle.Unpickler):
 
         if module == 'collections' and name == 'OrderedDict':
             return getattr(collections, name)
-        if module == 'torch._utils' and name in ['_rebuild_tensor_v2', '_rebuild_parameter', '_rebuild_device_tensor_from_numpy']:
+        if module == 'torch._utils' and name in ['_rebuild_tensor_v2', '_rebuild_parameter',
+                                                 '_rebuild_device_tensor_from_numpy']:
             return getattr(torch._utils, name)
-        if module == 'torch' and name in ['FloatStorage', 'HalfStorage', 'IntStorage', 'LongStorage', 'DoubleStorage', 'ByteStorage', 'float32', 'BFloat16Storage']:
+        if module == 'torch' and name in ['FloatStorage', 'HalfStorage', 'IntStorage', 'LongStorage', 'DoubleStorage',
+                                          'ByteStorage', 'float32', 'BFloat16Storage']:
             return getattr(torch, name)
         if module == 'torch.nn.modules.container' and name in ['ParameterDict']:
             return getattr(torch.nn.modules.container, name)
@@ -66,6 +69,7 @@ class RestrictedUnpickler(pickle.Unpickler):
 # Regular expression that accepts 'dirname/version', 'dirname/data.pkl', and 'dirname/data/<number>'
 allowed_zip_names_re = re.compile(r"^([^/]+)/((data/\d+)|version|(data\.pkl))$")
 data_pkl_re = re.compile(r"^([^/]+)/data\.pkl$")
+
 
 def check_zip_filenames(filename, names):
     for name in names:
@@ -139,7 +143,9 @@ def load_with_extra(filename, extra_handler=None, *args, **kwargs):
         print(f"Error verifying pickled file from {filename}:", file=sys.stderr)
         print(traceback.format_exc(), file=sys.stderr)
         print("-----> !!!! The file is most likely corrupted !!!! <-----", file=sys.stderr)
-        print("You can skip this check with --disable-safe-unpickle commandline argument, but that is not going to help you.\n\n", file=sys.stderr)
+        print(
+            "You can skip this check with --disable-safe-unpickle commandline argument, but that is not going to help you.\n\n",
+            file=sys.stderr)
         return None
 
     except Exception:
@@ -190,4 +196,3 @@ with safe.Extra(handler):
 unsafe_torch_load = torch.load
 torch.load = load
 global_extra_handler = None
-

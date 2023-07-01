@@ -37,6 +37,7 @@ def create_auto_preprocessing_script_data():
             continue
 
         constructor = lambda s=script: ScriptPostprocessingForMainUI(s.script_class())
-        res.append(scripts.ScriptClassData(script_class=constructor, path=script.path, basedir=script.basedir, module=script.module))
+        res.append(scripts.ScriptClassData(script_class=constructor, path=script.path, basedir=script.basedir,
+                                           module=script.module))
 
     return res

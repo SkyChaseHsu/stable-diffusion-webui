@@ -5,10 +5,8 @@ import time
 import gradio as gr
 from pydantic import BaseModel, Field
 
-from modules.shared import opts
-
 import modules.shared as shared
-
+from modules.shared import opts
 
 current_task = None
 pending_tasks = {}
@@ -47,7 +45,8 @@ def add_task_to_queue(id_job):
 
 class ProgressRequest(BaseModel):
     id_task: str = Field(default=None, title="Task ID", description="id of the task to get progress for")
-    id_live_preview: int = Field(default=-1, title="Live preview image ID", description="id of last received last preview image")
+    id_live_preview: int = Field(default=-1, title="Live preview image ID",
+                                 description="id of last received last preview image")
 
 
 class ProgressResponse(BaseModel):
@@ -57,7 +56,8 @@ class ProgressResponse(BaseModel):
     progress: float = Field(default=None, title="Progress", description="The progress with a range of 0 to 1")
     eta: float = Field(default=None, title="ETA in secs")
     live_preview: str = Field(default=None, title="Live preview image", description="Current live preview; a data: uri")
-    id_live_preview: int = Field(default=None, title="Live preview image ID", description="Send this together with next request to prevent receiving same image")
+    id_live_preview: int = Field(default=None, title="Live preview image ID",
+                                 description="Send this together with next request to prevent receiving same image")
     textinfo: str = Field(default=None, title="Info text", description="Info text used by WebUI.")
 
 
@@ -71,7 +71,8 @@ def progressapi(req: ProgressRequest):
     completed = req.id_task in finished_tasks
 
     if not active:
-        return ProgressResponse(active=active, queued=queued, completed=completed, id_live_preview=-1, textinfo="In queue..." if queued else "Waiting...")
+        return ProgressResponse(active=active, queued=queued, completed=completed, id_live_preview=-1,
+                                textinfo="In queue..." if queued else "Waiting...")
 
     progress = 0
 
@@ -104,7 +105,8 @@ def progressapi(req: ProgressRequest):
     else:
         live_preview = None
 
-    return ProgressResponse(active=active, queued=queued, completed=completed, progress=progress, eta=eta, live_preview=live_preview, id_live_preview=id_live_preview, textinfo=shared.state.textinfo)
+    return ProgressResponse(active=active, queued=queued, completed=completed, progress=progress, eta=eta,
+                            live_preview=live_preview, id_live_preview=id_live_preview, textinfo=shared.state.textinfo)
 
 
 def restore_progress(id_task):

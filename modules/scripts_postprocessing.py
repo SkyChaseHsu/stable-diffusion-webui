@@ -1,4 +1,5 @@
 import os
+
 import gradio as gr
 
 from modules import errors, shared
@@ -44,8 +45,6 @@ class ScriptPostprocessing:
 
     def image_changed(self):
         pass
-
-
 
 
 def wrap_call(func, filename, funcname, *args, default=None, **kwargs):
@@ -101,7 +100,8 @@ class ScriptPostprocessingRunner:
 
             return len(self.scripts)
 
-        script_scores = {script.name: (script_score(script.name), script.order, script.name, original_index) for original_index, script in enumerate(self.scripts)}
+        script_scores = {script.name: (script_score(script.name), script.order, script.name, original_index) for
+                         original_index, script in enumerate(self.scripts)}
 
         return sorted(self.scripts, key=lambda x: script_scores[x.name])
 
@@ -149,4 +149,3 @@ class ScriptPostprocessingRunner:
     def image_changed(self):
         for script in self.scripts_in_preferred_order():
             script.image_changed()
-

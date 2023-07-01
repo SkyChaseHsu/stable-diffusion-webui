@@ -1,16 +1,15 @@
-import glob
+import html
+import json
 import os.path
 import urllib.parse
 from pathlib import Path
+
+import gradio as gr
 from PIL import PngImagePlugin
 
 from modules import shared
-from modules.images import read_info_from_image
-import gradio as gr
-import json
-import html
-
 from modules.generation_parameters_copypaste import image_from_url_text
+from modules.images import read_info_from_image
 
 extra_pages = []
 allowed_dirs = set()
@@ -28,7 +27,8 @@ def fetch_file(filename: str = ""):
     from starlette.responses import FileResponse
 
     if not any([Path(x).absolute() in Path(filename).absolute().parents for x in allowed_dirs]):
-        raise ValueError(f"File cannot be fetched: {filename}. Must be in one of directories registered by extra pages.")
+        raise ValueError(
+            f"File cannot be fetched: {filename}. Must be in one of directories registered by extra pages.")
 
     ext = os.path.splitext(filename)[1].lower()
     if ext not in (".png", ".jpg", ".webp"):
@@ -76,7 +76,8 @@ class ExtraNetworksPage:
     def search_terms_from_path(self, filename, possible_directories=None):
         abspath = os.path.abspath(filename)
 
-        for parentdir in (possible_directories if possible_directories is not None else self.allowed_directories_for_previews()):
+        for parentdir in (
+        possible_directories if possible_directories is not None else self.allowed_directories_for_previews()):
             parentdir = os.path.abspath(parentdir)
             if abspath.startswith(parentdir):
                 return abspath[len(parentdir):].replace('\\', '/')
@@ -112,8 +113,8 @@ class ExtraNetworksPage:
             subdirs = {"": 1, **subdirs}
 
         subdirs_html = "".join([f"""
-<button class='lg secondary gradio-button custom-button{" search-all" if subdir=="" else ""}' onclick='extraNetworksSearchButton("{tabname}_extra_tabs", event)'>
-{html.escape(subdir if subdir!="" else "all")}
+<button class='lg secondary gradio-button custom-button{" search-all" if subdir == "" else ""}' onclick='extraNetworksSearchButton("{tabname}_extra_tabs", event)'>
+{html.escape(subdir if subdir != "" else "all")}
 </button>
 """ for subdir in subdirs])
 
@@ -152,7 +153,8 @@ class ExtraNetworksPage:
 
         onclick = item.get("onclick", None)
         if onclick is None:
-            onclick = '"' + html.escape(f"""return cardClicked({json.dumps(tabname)}, {item["prompt"]}, {"true" if self.allow_negative_prompt else "false"})""") + '"'
+            onclick = '"' + html.escape(
+                f"""return cardClicked({json.dumps(tabname)}, {item["prompt"]}, {"true" if self.allow_negative_prompt else "false"})""") + '"'
 
         height = f"height: {shared.opts.extra_networks_card_height}px;" if shared.opts.extra_networks_card_height else ''
         width = f"width: {shared.opts.extra_networks_card_width}px;" if shared.opts.extra_networks_card_width else ''
@@ -182,7 +184,8 @@ class ExtraNetworksPage:
             "name": item["name"],
             "description": (item.get("description") or ""),
             "card_clicked": onclick,
-            "save_card_preview": '"' + html.escape(f"""return saveCardPreview(event, {json.dumps(tabname)}, {json.dumps(item["local_preview"])})""") + '"',
+            "save_card_preview": '"' + html.escape(
+                f"""return saveCardPreview(event, {json.dumps(tabname)}, {json.dumps(item["local_preview"])})""") + '"',
             "search_term": item.get("search_term", ""),
             "metadata_button": metadata_button,
             "serach_only": " search_only" if serach_only else "",
@@ -263,7 +266,7 @@ def create_ui(container, button, tabname):
     ui.stored_extra_pages = pages_in_preferred_order(extra_pages.copy())
     ui.tabname = tabname
 
-    with gr.Tabs(elem_id=tabname+"_extra_tabs") as tabs:
+    with gr.Tabs(elem_id=tabname + "_extra_tabs") as tabs:
         for page in ui.stored_extra_pages:
             page_id = page.title.lower().replace(" ", "_")
 
@@ -272,13 +275,16 @@ def create_ui(container, button, tabname):
                 page_elem = gr.HTML('', elem_id=elem_id)
                 ui.pages.append(page_elem)
 
-                page_elem.change(fn=lambda: None, _js='function(){applyExtraNetworkFilter(' + json.dumps(tabname) + '); return []}', inputs=[], outputs=[])
+                page_elem.change(fn=lambda: None,
+                                 _js='function(){applyExtraNetworkFilter(' + json.dumps(tabname) + '); return []}',
+                                 inputs=[], outputs=[])
 
-    gr.Textbox('', show_label=False, elem_id=tabname+"_extra_search", placeholder="Search...", visible=False)
-    button_refresh = gr.Button('Refresh', elem_id=tabname+"_extra_refresh")
+    gr.Textbox('', show_label=False, elem_id=tabname + "_extra_search", placeholder="Search...", visible=False)
+    button_refresh = gr.Button('Refresh', elem_id=tabname + "_extra_refresh")
 
-    ui.button_save_preview = gr.Button('Save preview', elem_id=tabname+"_save_preview", visible=False)
-    ui.preview_target_filename = gr.Textbox('Preview save filename', elem_id=tabname+"_preview_filename", visible=False)
+    ui.button_save_preview = gr.Button('Save preview', elem_id=tabname + "_save_preview", visible=False)
+    ui.preview_target_filename = gr.Textbox('Preview save filename', elem_id=tabname + "_preview_filename",
+                                            visible=False)
 
     def toggle_visibility(is_visible):
         is_visible = not is_visible
@@ -286,7 +292,8 @@ def create_ui(container, button, tabname):
         if is_visible and not ui.pages_contents:
             refresh()
 
-        return is_visible, gr.update(visible=is_visible), gr.update(variant=("secondary-down" if is_visible else "secondary")), *ui.pages_contents
+        return is_visible, gr.update(visible=is_visible), gr.update(
+            variant=("secondary-down" if is_visible else "secondary")), *ui.pages_contents
 
     state_visible = gr.State(value=False)
     button.click(fn=toggle_visibility, inputs=[state_visible], outputs=[state_visible, container, button, *ui.pages])
@@ -348,4 +355,3 @@ def setup_ui(ui, gallery):
         inputs=[ui.preview_target_filename, gallery, ui.preview_target_filename],
         outputs=[*ui.pages]
     )
-

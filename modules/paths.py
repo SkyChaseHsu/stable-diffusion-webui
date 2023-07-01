@@ -1,16 +1,15 @@
 import os
 import sys
-from modules.paths_internal import models_path, script_path, data_path, extensions_dir, extensions_builtin_dir
 
-import modules.safe
-
+from modules.paths_internal import script_path
 
 # data_path = cmd_opts_pre.data
 sys.path.insert(0, script_path)
 
 # search for directory of stable diffusion in following places
 sd_path = None
-possible_sd_paths = [os.path.join(script_path, 'repositories/stable-diffusion-stability-ai'), '.', os.path.dirname(script_path)]
+possible_sd_paths = [os.path.join(script_path, 'repositories/stable-diffusion-stability-ai'), '.',
+                     os.path.dirname(script_path)]
 for possible_sd_path in possible_sd_paths:
     if os.path.exists(os.path.join(possible_sd_path, 'ldm/models/diffusion/ddpm.py')):
         sd_path = os.path.abspath(possible_sd_path)

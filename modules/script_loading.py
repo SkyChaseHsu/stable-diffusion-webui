@@ -1,8 +1,7 @@
+import importlib.util
 import os
 import sys
 import traceback
-import importlib.util
-from types import ModuleType
 
 
 def load_module(path):

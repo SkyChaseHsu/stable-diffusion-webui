@@ -1,23 +1,20 @@
-import torch
-import safetensors.torch
-import os
 import collections
-from collections import namedtuple
-from modules import paths, shared, devices, script_callbacks, sd_models
 import glob
+import os
 from copy import deepcopy
 
+from modules import paths, shared, devices, script_callbacks, sd_models
 
 vae_path = os.path.abspath(os.path.join(paths.models_path, "VAE"))
 vae_ignore_keys = {"model_ema.decay", "model_ema.num_updates"}
 vae_dict = {}
-
 
 base_vae = None
 loaded_vae_file = None
 checkpoint_info = None
 
 checkpoints_loaded = collections.OrderedDict()
+
 
 def get_base_vae(model):
     if base_vae is not None and checkpoint_info == model.sd_checkpoint_info and model:
@@ -89,7 +86,8 @@ def refresh_vae_list():
 
 def find_vae_near_checkpoint(checkpoint_file):
     checkpoint_path = os.path.splitext(checkpoint_file)[0]
-    for vae_location in [f"{checkpoint_path}.vae.pt", f"{checkpoint_path}.vae.ckpt", f"{checkpoint_path}.vae.safetensors"]:
+    for vae_location in [f"{checkpoint_path}.vae.pt", f"{checkpoint_path}.vae.ckpt",
+                         f"{checkpoint_path}.vae.safetensors"]:
         if os.path.isfile(vae_location):
             return vae_location
 
@@ -151,7 +149,8 @@ def load_vae(model, vae_file=None, vae_source="from unknown source"):
 
         # clean up cache if limit is reached
         if cache_enabled:
-            while len(checkpoints_loaded) > shared.opts.sd_vae_checkpoint_cache + 1: # we need to count the current model
+            while len(
+                    checkpoints_loaded) > shared.opts.sd_vae_checkpoint_cache + 1:  # we need to count the current model
                 checkpoints_loaded.popitem(last=False)  # LRU
 
         # If vae used is not in dict, update it

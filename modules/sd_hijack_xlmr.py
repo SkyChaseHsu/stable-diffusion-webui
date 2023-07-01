@@ -1,8 +1,6 @@
-import open_clip.tokenizer
 import torch
 
 from modules import sd_hijack_clip, devices
-from modules.shared import opts
 
 
 class FrozenXLMREmbedderWithCustomWords(sd_hijack_clip.FrozenCLIPEmbedderWithCustomWords):
@@ -28,7 +26,8 @@ class FrozenXLMREmbedderWithCustomWords(sd_hijack_clip.FrozenCLIPEmbedderWithCus
 
     def encode_embedding_init_text(self, init_text, nvpt):
         embedding_layer = self.wrapped.roberta.embeddings
-        ids = self.wrapped.tokenizer(init_text, max_length=nvpt, return_tensors="pt", add_special_tokens=False)["input_ids"]
+        ids = self.wrapped.tokenizer(init_text, max_length=nvpt, return_tensors="pt", add_special_tokens=False)[
+            "input_ids"]
         embedded = embedding_layer.token_embedding.wrapped(ids.to(devices.device)).squeeze(0)
 
         return embedded

@@ -75,8 +75,8 @@ class ScriptPostprocessingUpscale(scripts_postprocessing.ScriptPostprocessing):
             info["Postprocess upscale by"] = upscale_by
 
         cache_key = (
-        hash(np.array(image.getdata()).tobytes()), upscaler.name, upscale_mode, upscale_by, upscale_to_width,
-        upscale_to_height, upscale_crop)
+            hash(np.array(image.getdata()).tobytes()), upscaler.name, upscale_mode, upscale_by, upscale_to_width,
+            upscale_to_height, upscale_crop)
         cached_image = upscale_cache.pop(cache_key, None)
 
         if cached_image is not None:

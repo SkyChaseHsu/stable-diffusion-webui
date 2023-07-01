@@ -144,4 +144,3 @@ def parse_prompts(prompts):
         res.append(updated_prompt)
 
     return res, extra_data
-

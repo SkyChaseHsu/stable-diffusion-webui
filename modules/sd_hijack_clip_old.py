@@ -53,7 +53,8 @@ def process_text_old(self: sd_hijack_clip.FrozenCLIPEmbedderWithCustomWordsBase,
                 ovf = remade_tokens[maxlen - 2:]
                 overflowing_words = [vocab.get(int(x), "") for x in ovf]
                 overflowing_text = self.wrapped.tokenizer.convert_tokens_to_string(''.join(overflowing_words))
-                hijack_comments.append(f"Warning: too many input tokens; some ({len(overflowing_words)}) have been truncated:\n{overflowing_text}\n")
+                hijack_comments.append(
+                    f"Warning: too many input tokens; some ({len(overflowing_words)}) have been truncated:\n{overflowing_text}\n")
 
             token_count = len(remade_tokens)
             remade_tokens = remade_tokens + [id_end] * (maxlen - 2 - len(remade_tokens))
@@ -70,7 +71,8 @@ def process_text_old(self: sd_hijack_clip.FrozenCLIPEmbedderWithCustomWordsBase,
 
 
 def forward_old(self: sd_hijack_clip.FrozenCLIPEmbedderWithCustomWordsBase, texts):
-    batch_multipliers, remade_batch_tokens, used_custom_terms, hijack_comments, hijack_fixes, token_count = process_text_old(self, texts)
+    batch_multipliers, remade_batch_tokens, used_custom_terms, hijack_comments, hijack_fixes, token_count = process_text_old(
+        self, texts)
 
     self.hijack.comments += hijack_comments
 

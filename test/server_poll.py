@@ -1,14 +1,16 @@
-import unittest
-import requests
-import time
 import os
+import time
+import unittest
+
+import requests
+
 from modules.paths import script_path
 
 
 def run_tests(proc, test_dir):
     timeout_threshold = 240
     start_time = time.time()
-    while time.time()-start_time < timeout_threshold:
+    while time.time() - start_time < timeout_threshold:
         try:
             requests.head("http://localhost:7860/")
             break

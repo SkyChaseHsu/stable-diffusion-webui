@@ -54,7 +54,7 @@ def get_matched_noise(_np_src_image, np_mask_rgb, noise_q=1, color_variation=0.0
                 window[:, y] = np.exp(-(x ** 2 + fy ** 2) * std)
             else:
                 window[:, y] = (1 / ((x ** 2 + 1.) * (fy ** 2 + 1.))) ** (
-                            std / 3.14)  # hey wait a minute that's not gaussian
+                        std / 3.14)  # hey wait a minute that's not gaussian
 
         return window
 
@@ -102,7 +102,7 @@ def get_matched_noise(_np_src_image, np_mask_rgb, noise_q=1, color_variation=0.0
     noise_rgb = np.real(_ifft2(noise_fft))
     shaped_noise_fft = _fft2(noise_rgb)
     shaped_noise_fft[:, :, :] = np.absolute(shaped_noise_fft[:, :, :]) ** 2 * (
-                src_dist ** noise_q) * src_phase  # perform the actual shaping
+            src_dist ** noise_q) * src_phase  # perform the actual shaping
 
     brightness_variation = 0.  # color_variation # todo: temporarily tieing brightness variation to color variation for now
     contrast_adjusted_np_src = _np_src_image[:] * (brightness_variation + 1.) - brightness_variation * 2.
@@ -257,7 +257,7 @@ class Script(scripts.Script):
         batch_size = p.batch_size
         p.n_iter = 1
         state.job_count = batch_count * (
-                    (1 if left > 0 else 0) + (1 if right > 0 else 0) + (1 if up > 0 else 0) + (1 if down > 0 else 0))
+                (1 if left > 0 else 0) + (1 if right > 0 else 0) + (1 if up > 0 else 0) + (1 if down > 0 else 0))
         all_processed_images = []
 
         for i in range(batch_count):

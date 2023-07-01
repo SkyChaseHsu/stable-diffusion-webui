@@ -1,5 +1,6 @@
 from pyngrok import ngrok, conf, exception
 
+
 def connect(token, port, region):
     account = None
     if token is None:
@@ -13,7 +14,7 @@ def connect(token, port, region):
     config = conf.PyngrokConfig(
         auth_token=token, region=region
     )
-    
+
     # Guard for existing tunnels
     existing = ngrok.get_tunnels(pyngrok_config=config)
     if existing:
@@ -22,9 +23,9 @@ def connect(token, port, region):
             if established.config['addr'][-4:] == str(port):
                 public_url = existing[0].public_url
                 print(f'ngrok has already been connected to localhost:{port}! URL: {public_url}\n'
-                    'You can use this link after the launch is complete.')
+                      'You can use this link after the launch is complete.')
                 return
-    
+
     try:
         if account is None:
             public_url = ngrok.connect(port, pyngrok_config=config, bind_tls=True).public_url
@@ -35,4 +36,4 @@ def connect(token, port, region):
               f'Your token: {token}, get the right one on https://dashboard.ngrok.com/get-started/your-authtoken')
     else:
         print(f'ngrok connected to localhost:{port}! URL: {public_url}\n'
-               'You can use this link after the launch is complete.')
+              'You can use this link after the launch is complete.')

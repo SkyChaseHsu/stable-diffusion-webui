@@ -1,7 +1,6 @@
-from torch.utils.checkpoint import checkpoint
-
 import ldm.modules.attention
 import ldm.modules.diffusionmodules.openaimodel
+from torch.utils.checkpoint import checkpoint
 
 
 def BasicTransformerBlock_forward(self, x, context=None):
@@ -43,4 +42,3 @@ def remove():
     ldm.modules.diffusionmodules.openaimodel.AttentionBlock.forward = stored[2]
 
     stored.clear()
-

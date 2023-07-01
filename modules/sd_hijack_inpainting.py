@@ -1,23 +1,16 @@
-import os
-import torch
-
-from einops import repeat
-from omegaconf import ListConfig
-
-import ldm.models.diffusion.ddpm
 import ldm.models.diffusion.ddim
+import ldm.models.diffusion.ddpm
 import ldm.models.diffusion.plms
-
-from ldm.models.diffusion.ddpm import LatentDiffusion
-from ldm.models.diffusion.plms import PLMSSampler
-from ldm.models.diffusion.ddim import DDIMSampler, noise_like
+import torch
+from ldm.models.diffusion.ddim import noise_like
 from ldm.models.diffusion.sampling_util import norm_thresholding
 
 
 @torch.no_grad()
 def p_sample_plms(self, x, c, t, index, repeat_noise=False, use_original_steps=False, quantize_denoised=False,
                   temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None,
-                  unconditional_guidance_scale=1., unconditional_conditioning=None, old_eps=None, t_next=None, dynamic_threshold=None):
+                  unconditional_guidance_scale=1., unconditional_conditioning=None, old_eps=None, t_next=None,
+                  dynamic_threshold=None):
     b, *_, device = *x.shape, x.device
 
     def get_model_output(x, t):
@@ -60,7 +53,7 @@ def p_sample_plms(self, x, c, t, index, repeat_noise=False, use_original_steps=F
         a_t = torch.full((b, 1, 1, 1), alphas[index], device=device)
         a_prev = torch.full((b, 1, 1, 1), alphas_prev[index], device=device)
         sigma_t = torch.full((b, 1, 1, 1), sigmas[index], device=device)
-        sqrt_one_minus_at = torch.full((b, 1, 1, 1), sqrt_one_minus_alphas[index],device=device)
+        sqrt_one_minus_at = torch.full((b, 1, 1, 1), sqrt_one_minus_alphas[index], device=device)
 
         # current prediction for x_0
         pred_x0 = (x - sqrt_one_minus_at * e_t) / a_t.sqrt()
@@ -69,7 +62,7 @@ def p_sample_plms(self, x, c, t, index, repeat_noise=False, use_original_steps=F
         if dynamic_threshold is not None:
             pred_x0 = norm_thresholding(pred_x0, dynamic_threshold)
         # direction pointing to x_t
-        dir_xt = (1. - a_prev - sigma_t**2).sqrt() * e_t
+        dir_xt = (1. - a_prev - sigma_t ** 2).sqrt() * e_t
         noise = sigma_t * noise_like(x.shape, device, repeat_noise) * temperature
         if noise_dropout > 0.:
             noise = torch.nn.functional.dropout(noise, p=noise_dropout)

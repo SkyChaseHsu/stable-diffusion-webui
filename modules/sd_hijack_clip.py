@@ -134,7 +134,9 @@ class FrozenCLIPEmbedderWithCustomWordsBase(torch.nn.Module):
 
                 # this is when we are at the end of alloted 75 tokens for the current chunk, and the current token is not a comma. opts.comma_padding_backtrack
                 # is a setting that specifies that if there is a comma nearby, the text after the comma should be moved out of this chunk and into the next.
-                elif opts.comma_padding_backtrack != 0 and len(chunk.tokens) == self.chunk_length and last_comma != -1 and len(chunk.tokens) - last_comma <= opts.comma_padding_backtrack:
+                elif opts.comma_padding_backtrack != 0 and len(
+                        chunk.tokens) == self.chunk_length and last_comma != -1 and len(
+                        chunk.tokens) - last_comma <= opts.comma_padding_backtrack:
                     break_location = last_comma + 1
 
                     reloc_tokens = chunk.tokens[break_location:]
@@ -150,7 +152,8 @@ class FrozenCLIPEmbedderWithCustomWordsBase(torch.nn.Module):
                 if len(chunk.tokens) == self.chunk_length:
                     next_chunk()
 
-                embedding, embedding_length_in_tokens = self.hijack.embedding_db.find_embedding_at_position(tokens, position)
+                embedding, embedding_length_in_tokens = self.hijack.embedding_db.find_embedding_at_position(tokens,
+                                                                                                            position)
                 if embedding is None:
                     chunk.tokens.append(token)
                     chunk.multipliers.append(weight)
@@ -230,7 +233,8 @@ class FrozenCLIPEmbedderWithCustomWordsBase(torch.nn.Module):
             zs.append(z)
 
         if len(used_embeddings) > 0:
-            embeddings_list = ", ".join([f'{name} [{embedding.checksum()}]' for name, embedding in used_embeddings.items()])
+            embeddings_list = ", ".join(
+                [f'{name} [{embedding.checksum()}]' for name, embedding in used_embeddings.items()])
             self.hijack.comments.append(f"Used embeddings: {embeddings_list}")
 
         return torch.hstack(zs)
@@ -249,7 +253,7 @@ class FrozenCLIPEmbedderWithCustomWordsBase(torch.nn.Module):
         if self.id_end != self.id_pad:
             for batch_pos in range(len(remade_batch_tokens)):
                 index = remade_batch_tokens[batch_pos].index(self.id_end)
-                tokens[batch_pos, index+1:tokens.shape[1]] = self.id_pad
+                tokens[batch_pos, index + 1:tokens.shape[1]] = self.id_pad
 
         z = self.encode_with_transformers(tokens)
 
@@ -311,7 +315,9 @@ class FrozenCLIPEmbedderWithCustomWords(FrozenCLIPEmbedderWithCustomWordsBase):
 
     def encode_embedding_init_text(self, init_text, nvpt):
         embedding_layer = self.wrapped.transformer.text_model.embeddings
-        ids = self.wrapped.tokenizer(init_text, max_length=nvpt, return_tensors="pt", add_special_tokens=False)["input_ids"]
-        embedded = embedding_layer.token_embedding.wrapped(ids.to(embedding_layer.token_embedding.wrapped.weight.device)).squeeze(0)
+        ids = self.wrapped.tokenizer(init_text, max_length=nvpt, return_tensors="pt", add_special_tokens=False)[
+            "input_ids"]
+        embedded = embedding_layer.token_embedding.wrapped(
+            ids.to(embedding_layer.token_embedding.wrapped.weight.device)).squeeze(0)
 
         return embedded

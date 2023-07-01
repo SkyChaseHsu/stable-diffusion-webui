@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from modules import devices
 
+
 # see https://github.com/AUTOMATIC1111/TorchDeepDanbooru for more
 
 
@@ -675,4 +676,3 @@ class DeepDanbooruModel(nn.Module):
         self.tags = state_dict.get('tags', [])
 
         super(DeepDanbooruModel, self).load_state_dict({k: v for k, v in state_dict.items() if k != 'tags'})
-
